@@ -16,7 +16,7 @@ jobs:
       with:
         node-version: ${{ matrix.node-version }}
     - name: Build
-      run: export NODE_OPTIONS=--max_old_space_size=6144  &&  cd playground && npm ci && BASE_URL=/kuber npm run build
+      run: export NODE_OPTIONS=--max_old_space_size=6144  && npm ci && BASE_URL=/kuber-playground/ npm run build
     
     - name: Deploy to GitHub Pages
       uses: Cecilapp/GitHub-Pages-deploy@v3
@@ -24,4 +24,4 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         email: sudipbhattarai100@gmail.com
-        build_dir: playground/dist/
+        build_dir: dist/
