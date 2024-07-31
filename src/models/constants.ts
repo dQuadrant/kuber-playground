@@ -119,6 +119,7 @@ export const NetworkUrls = {
   "preprod testnet": "https://preprod.kuberide.com",
   mainnet: "https://mainnet.kuberide.com",
   localhost: "http://localhost:8081",
+  "sanchonet": "https://kuber-govtool.cardanoapi.io"
 };
 
 export const HaskellResults = {

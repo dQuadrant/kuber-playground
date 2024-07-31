@@ -10,30 +10,31 @@ import {
 } from "@emurgo/cardano-serialization-lib-asmjs";
 import { Buffer } from "buffer";
 import { useToast } from "vue-toast-notification";
-enum KeyType {
-  scriptHash = "Script Hash",
-  pubKeyHash = "Key Hash",
-  referencePointer = "Pointer"
-}
-enum Networks {
-  Testnet = "Testnet",
-  Mainnet = "Mainnet"
-}
+import { KeyType, Networks } from "@/models/enums/Misc";
 interface CredentialParseResult {
   error?: string,
   value?: StakeCredential
 }
 </script>
 <template>
-  <div class="w-full  ">
-    <div class="w-full text-center font-bold text-xl border-b py-2 bg-slate-200 border-r-red-900 p">
-      {{ composing?'Composing': 'Decomposing' }} Address
+  <div class="w-full">
+    <div
+      class="w-full text-center font-bold text-xl border-b py-2 bg-slate-200 border-r-red-900 p"
+    >
+      {{ composing ? "Composing" : "Decomposing" }} Address
     </div>
     <div class="flex flex-col px-2 pt-4">
       <div v-if="!composing">
         <label>Address</label>
-        <input class="addr-input w-full" :class="{ error: error.address }" type="text" v-model="addressInput" />
-        <div class="pr-2 float-right text-red-500" v-if="error.address">{{ error.address }}</div>
+        <input
+          class="addr-input w-full"
+          :class="{ error: error.address }"
+          type="text"
+          v-model="addressInput"
+        />
+        <div class="pr-2 float-right text-red-500" v-if="error.address">
+          {{ error.address }}
+        </div>
       </div>
       <div v-else class="flex flex-col w-full items-start">
         <label for="addr-network-id">Network</label>
@@ -45,46 +46,78 @@ interface CredentialParseResult {
         <div class="w-full mt-4">
           <label for="payment-credential">Payment Credential</label>
           <div class="dropdown-container">
-            <select id="payment-credential-type" v-model="paymentKey.type" class="dropdown-input dropdown-input-select">
+            <select
+              id="payment-credential-type"
+              v-model="paymentKey.type"
+              class="dropdown-input dropdown-input-select"
+            >
               <option>Script Hash</option>
               <option>Key Hash</option>
             </select>
-            <input id="payment-credential" placeholder="Payment Credential" class="dropdown-input grow"
-              :class="{ error: error.paymentKey }" type="text" v-model="paymentKeyInput" />
+            <input
+              id="payment-credential"
+              placeholder="Payment Credential"
+              class="dropdown-input grow"
+              :class="{ error: error.paymentKey }"
+              type="text"
+              v-model="paymentKeyInput"
+            />
           </div>
-          <div class="pr-2 float-right text-red-500" v-if="error.paymentKey">{{ error.paymentKey }}</div>
-
+          <div class="pr-2 float-right text-red-500" v-if="error.paymentKey">
+            {{ error.paymentKey }}
+          </div>
         </div>
         <div class="w-full mt-4">
           <label for="stake-credential">Stake Credential</label>
           <div class="dropdown-container">
-            <select id="stake-credential-type" v-model="stakeKey.type" class="dropdown-input dropdown-input-select">
+            <select
+              id="stake-credential-type"
+              v-model="stakeKey.type"
+              class="dropdown-input dropdown-input-select"
+            >
               <option>Script Hash</option>
               <option>Key Hash</option>
             </select>
-            <input id="stake-credential" placeholder="Stake Credential" class="dropdown-input grow"
-              :class="{ error: error.stakeKey }" type="text" v-model="stakeKeyInput" />
+            <input
+              id="stake-credential"
+              placeholder="Stake Credential"
+              class="dropdown-input grow"
+              :class="{ error: error.stakeKey }"
+              type="text"
+              v-model="stakeKeyInput"
+            />
           </div>
-          <div class="pr-2 float-right text-red-500" v-if="error.stakeKey">{{ error.stakeKey }}</div>
+          <div class="pr-2 float-right text-red-500" v-if="error.stakeKey">
+            {{ error.stakeKey }}
+          </div>
         </div>
       </div>
       <!-- <hr class="border my-3" /> -->
-      <div class=" mb-4 mt-8 text-center">
+      <div class="mb-4 mt-8 text-center">
         <button @click="onPreformAction" class="button hover:bg-green-600">
-          {{ composing?'Compose': 'Decompose' }}
+          {{ composing ? "Compose" : "Decompose" }}
         </button>
 
-        <button @click="switchEdit"
-          class="ml-3 rounded py-1 px-2 border-2 border-gray-300 hover:bg-gray-300 hover:border-r-gray-400 ">
+        <button
+          @click="switchEdit"
+          class="ml-3 rounded py-1 px-2 border-2 border-gray-300 hover:bg-gray-300 hover:border-r-gray-400"
+        >
           <v-icon name="bi-arrow-down-up"></v-icon>
         </button>
       </div>
       <div v-if="composing">
         <div class="mt-2" v-if="address && !error.stakeKey && !error.paymentKey">
           <label class="text-xl">Address</label>
-          <div class="flex content-center py-2 select-none" @click="writeClipboard(address)">
-            <div class="overflow-scroll pb-2 grow scroll-m-none mr-1 text-gray-700 font-mono ml-1">
-              {{ address.substring(0, 20) }}...{{ address.substring(address.length - 20) }}
+          <div
+            class="flex content-center py-2 select-none"
+            @click="writeClipboard(address)"
+          >
+            <div
+              class="overflow-scroll pb-2 grow scroll-m-none mr-1 text-gray-700 font-mono ml-1"
+            >
+              {{ address.substring(0, 20) }}...{{
+                address.substring(address.length - 20)
+              }}
             </div>
             <v-icon name="fa-regular-clone" />
           </div>
@@ -92,34 +125,42 @@ interface CredentialParseResult {
       </div>
       <div v-else-if="paymentKey.value">
         <label class="text-xl font-semibold">Network</label>
-        <div class="ml-3"> {{ network }}</div>
+        <div class="ml-3">{{ network }}</div>
         <hr class="border mb-8 mt-6 w-full" />
         <label class="text-xl">Payment Credential</label>
-        <div class="flex content-center py-2 select-none" @click="writeClipboard(paymentKey.value)">
-          <div class="whitespace-nowrap font-semibold text-md">{{
-            paymentKey.type == KeyType.pubKeyHash ? 
-            'Key Hash' : 'Script Hash'}}</div>
-          <div class="overflow-scroll scrollbar-none grow scroll-m-none mr-1 text-gray-700 font-mono ml-5">{{
-            paymentKey.value
-          }}</div>
+        <div
+          class="flex content-center py-2 select-none"
+          @click="writeClipboard(paymentKey.value)"
+        >
+          <div class="whitespace-nowrap font-semibold text-md">
+            {{ paymentKey.type == KeyType.pubKeyHash ? "Key Hash" : "Script Hash" }}
+          </div>
+          <div
+            class="overflow-scroll scrollbar-none grow scroll-m-none mr-1 text-gray-700 font-mono ml-5"
+          >
+            {{ paymentKey.value }}
+          </div>
           <v-icon name="fa-regular-clone" />
         </div>
         <div v-if="stakeKey.value" class="mt-5">
           <hr class="border mb-8" />
           <label class="text-xl">Stake Credential</label>
-          <div class="flex content-center py-2 select-none" @click="writeClipboard(stakeKey.value)">
-            <div class="whitespace-nowrap font-semibold text-md">{{
-              stakeKey.type == KeyType.pubKeyHash ? 
-              'Key Hash' : 'ScriptHash'}}</div>
-            <div class="overflow-scroll scrollbar-none grow scroll-m-none mr-1 text-gray-700 font-mono ml-5">{{
-                stakeKey.value
-            }}</div>
+          <div
+            class="flex content-center py-2 select-none"
+            @click="writeClipboard(stakeKey.value)"
+          >
+            <div class="whitespace-nowrap font-semibold text-md">
+              {{ stakeKey.type == KeyType.pubKeyHash ? "Key Hash" : "ScriptHash" }}
+            </div>
+            <div
+              class="overflow-scroll scrollbar-none grow scroll-m-none mr-1 text-gray-700 font-mono ml-5"
+            >
+              {{ stakeKey.value }}
+            </div>
             <v-icon name="fa-regular-clone" />
           </div>
-
         </div>
       </div>
-
     </div>
   </div>
 </template>
@@ -253,8 +294,10 @@ export default {
           error: errorOnEmpty ? "Empty" : ""
         }
       }
+
     },
     getAddressFromHashKeys(paymentCredStr: string, stakeCredStr: string) {
+
       const network = this.network == Networks.Testnet ? 0 : 1;
       const paymentCred = this.parseCredential(this.paymentKey.type, paymentCredStr, true)
       const stakeCred = this.parseCredential(this.stakeKey.type, stakeCredStr)
@@ -283,7 +326,6 @@ export default {
 <style scoped lang="postcss">
 .addr-input {
   @apply focus:border-blue-400 border-y border-x-2 rounded p-1 py-2 text-base text-gray-700 bg-white bg-clip-padding focus:bg-gray-100;
-
 }
 
 .dropdown-input {
@@ -295,15 +337,15 @@ export default {
 }
 
 .dropdown-input.error {
-  @apply border-red-500 border-b-2
+  @apply border-red-500 border-b-2;
 }
 
 .error {
-  @apply border-b-red-500
+  @apply border-b-red-500;
 }
 
 label {
-  @apply block font-semibold text-gray-600 mb-2
+  @apply block font-semibold text-gray-600 mb-2;
 }
 
 .dropdown-container:has(.dropdown-input:focus) {
@@ -315,14 +357,13 @@ label {
 }
 
 .button {
-    border: none;
-    color: #fff;
-    background: green;
-    appearance: none;
-    font: inherit;
-    padding: 0.5em;
-    border-radius: 0.3em;
-    cursor: pointer;
-  }
-  
+  border: none;
+  color: #fff;
+  background: green;
+  appearance: none;
+  font: inherit;
+  padding: 0.5em;
+  border-radius: 0.3em;
+  cursor: pointer;
+}
 </style>

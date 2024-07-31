@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import { Buffer } from "buffer";
 import {
-  callKuber,
-  getPolicyIdOfScriptFromKuber,
-  listProviders,
-  signTx,
-  submitTx,
+CIP30ProviderProxy,
+CIP30Wallet,
+Kuber,
 } from "kuber-client";
+import backend from "kuber-client/cbor"
+import blake from "blakejs"
 </script>
 
 <template>
@@ -353,13 +353,13 @@ import {
             v-if="language === LanguageEnums.Haskell"
             class="flex flex-col h-5/6 overflow-y-auto"
           >
-            <pre v-for="output in haskellOutputs" class="text-gray-800 py-1">{{
-              output
+            <pre v-for="output in haskellOutputs" :key="output.id" class="text-gray-800 py-1">{{
+              output.value
             }}</pre>
           </div>
           <div id="kuber-output" v-else class="flex flex-col h-5/6 overflow-y-auto">
-            <pre v-for="output in kuberOutputs" class="text-gray-800 py-1">{{
-              output
+            <pre v-for="output in kuberOutputs" :key="output.id" class="text-gray-800 py-1">{{
+              output.value
             }}</pre>
           </div>
         </div>
@@ -715,14 +715,7 @@ import {
 import * as _notification from "@dafcoe/vue-notification";
 import loader from "@monaco-editor/loader";
 import { useToast } from "vue-toast-notification";
-import {
-  Address,
-  BaseAddress,
-  Ed25519KeyHash,
-  EnterpriseAddress,
-  hash_transaction,
-  PointerAddress,
-} from "@emurgo/cardano-serialization-lib-asmjs";
+
 import { SchemaKuber } from "./schemas";
 import Description from "./descriptions";
 import {
@@ -747,7 +740,6 @@ import {
   NetworkSettingEnums,
 } from "@/models/enums/SettingEnum";
 import AddressUtil from "./AddressUtil.vue";
-import type { CIP30Instace, CIP30Provider } from "kuber-client/types";
 
 const notification = _notification.useNotificationStore();
 
@@ -760,11 +752,11 @@ export default {
     this.editorInit();
 
     function refreshProvider() {
-      __this.providers = listProviders();
+      __this.providers = CIP30Wallet.listProviders();
       if (counter--) __this.timeout = setTimeout(refreshProvider, 1000);
       else __this.timeout = 0;
     }
-    this.providers = listProviders();
+    this.providers = CIP30Wallet.listProviders();
     this.provider = this.providers.length != 0 ? this.providers[0] : null;
     this.timeout = setTimeout(refreshProvider, 1000);
   },
@@ -779,8 +771,8 @@ export default {
           : "Same server's API backend",
       url: import.meta.env.VITE_API_URL,
     };
-    const providers: Array<CIP30Provider> = [];
-    const provider: CIP30Provider = null;
+    const providers: Array<CIP30ProviderProxy> = [];
+    const provider: CIP30ProviderProxy = null;
     let defaultApi = JSON.parse(localStorage.getItem("network")) || autoApi;
     const customNetworks = JSON.parse(localStorage.getItem("networks")) || {};
 
@@ -792,6 +784,7 @@ export default {
       editingNetwork: {},
       newNetwork: { name: "", url: "", errors: [] },
       haskellOutputs: [],
+      outputCounter:0,
       networkSettingTab: NetworkSettingEnums.EditNetwork,
       kuberOutputs: [],
       outputTerminalVisibility: false,
@@ -805,7 +798,7 @@ export default {
       utility: UtilitiesEnums.Address,
       language: LanguageEnums.Kuber,
       interval: 0,
-      timeout: 0,
+      timeout: 0 as any,
       showKeyHashModal: false,
       showPolicyModal: false,
       address: "",
@@ -826,6 +819,17 @@ export default {
       ],
       apis: {
         auto: autoApi,
+        "sanchonet":{
+          text: "text-blue-400",
+          border: "border-blue-400",
+          name: "Sanchonet",
+          display:
+            localStorage.getItem(NetworkEnums.SanchoNet) ||
+            NetworkUrls[NetworkEnums.SanchoNet],
+          url:
+            localStorage.getItem(NetworkEnums.SanchoNet) ||
+            NetworkUrls[NetworkEnums.SanchoNet],
+        },
         "preview testnet": {
           text: "text-blue-400",
           border: "border-blue-400",
@@ -1027,12 +1031,14 @@ export default {
     },
 
     setKuberOutput(output: string) {
-      this.kuberOutputs.push(output);
+      let counter=this.outputCounter++
+      this.kuberOutputs.push({id: counter ,value:output});
       // this.updateOutputScroll("kuber-output");
     },
 
     setHaskellOutput(output: string) {
-      this.haskellOutputs.push(output);
+      let counter=this.outputCounter++
+      this.haskellOutputs.push({id: counter ,value:output});
       // this.updateOutputScroll("haskell-output");
     },
 
@@ -1090,7 +1096,28 @@ export default {
       this.utility = utility;
     },
 
-    setProvider(provider: CIP30Provider) {
+    setProvider(provider: CIP30ProviderProxy) {
+      console.log("SetProvider",provider)
+      const results =[]
+      let start_counter=this.outputCounter
+      if(provider.__provider.supportedExtensions){
+        results.push('> Extensions')
+        const extensions=provider.__provider.supportedExtensions!
+        extensions.forEach(extension => {
+          Object.keys(extension).forEach(key => {
+            results.push({id:++start_counter , value:`   - ${key}: ${extension[key]}`})
+          })
+        })
+        if(results.length==1){
+          results.push(`  --- Empty Array --- `)
+        }
+      }else{
+        const results ={id:++start_counter, value:"Wallet doesn't expose `supportedExtension` field"}
+      }
+
+      this.kuberOutputs=[{id:++start_counter,value:"Selected Wallet : "+provider.name},...results]
+      this.outputCounter=start_counter
+      this.showOutputTerminal(true);
       this.provider = provider;
     },
 
@@ -1159,14 +1186,7 @@ export default {
     },
     getScriptPolicy() {
       // TODO do this with serialization library and not by calling api
-      getPolicyIdOfScriptFromKuber(
-        this.activeApi.url || this.apis.mainnet.url,
-        this.scriptJson
-      )
-        .catch((err) => alert(err))
-        .then((res: string) => {
-          this.policyId = res;
-        });
+      return ""
     },
 
     compileCode() {
@@ -1201,7 +1221,7 @@ export default {
       // console.log(this.$options.editor.getValue());
     },
 
-    constructSignAndSubmit(provider: CIP30Provider): any {
+    constructSignAndSubmit(provider: CIP30ProviderProxy): any {
       this.kuberOutputs = [];
       this.isCompiling = true;
       this.showOutputTerminal(true);
@@ -1227,59 +1247,39 @@ export default {
 
         return provider
           .enable()
-          .then(async (instance: CIP30Instace) => {
-            const collateral = instance.getCollateral
-              ? (await instance.getCollateral().catch(() => {})) || []
-              : [];
-            if (request.collaterals && typeof request.collaterals.push === "function") {
-              collateral.forEach((x) => request.collaterals.push(x));
-            } else if (collateral.length) {
-              request.collaterals = collateral;
-            }
-            if (this.addSelections) {
-              const availableUtxos = await instance.getUtxos();
-              if (request.selections) {
-                if (typeof request.selections.push === "function") {
-                  availableUtxos.forEach((v) => {
-                    request.selections.push(v);
-                  });
-                } else {
-                  availableUtxos.push(request.selections);
-                  request.selections = availableUtxos;
-                }
-              } else {
-                request.selections = availableUtxos;
-              }
-            }
+          .then(async (instance: CIP30Wallet) => {
+            
             let url = this.activeApi.url;
             if (!url && this.activeApi.name == "Auto") {
-              const network = await instance.getNetworkId();
+              const network = await instance.networkId();
               if (network) {
                 url = this.apis.mainnet.url;
               } else {
-                url = this.apis["preprod testnet"].url;
+                url = this.apis["sanchonet"].url;
               }
             }
-            const transactionResponse = await callKuber(url, JSON.stringify(request));
+            const kuber = new Kuber(url)
+            const transactionResponse:any  = await kuber.buildWithProvider(instance,request,true)
+            console.log("Built Tx",transactionResponse)
             this.kuberOutputs.push(
               "Fee             : " + transactionResponse.fee + " lovelace"
             );
-            this.kuberOutputs.push("Unsigned txHash : " + transactionResponse.txHash);
+            this.kuberOutputs.push("txHash : " + transactionResponse.hash);
             this.kuberOutputs.push(
               "Unsigned Tx     : [" +
-                transactionResponse.tx.length / 2 +
+                transactionResponse.cborHex.length / 2 +
                 " bytes]  " +
-                transactionResponse.tx
+                transactionResponse.cborHex
             );
-            const signedTx = await signTx(instance, transactionResponse.tx);
-            const signedTxHex = signedTx.to_hex();
+            const signedTxHex = await instance.getSignedTx(transactionResponse.cborHex,true);
+            
             this.kuberOutputs.push(
               "Signed   Tx     : [" + signedTxHex.length / 2 + " bytes]  " + signedTxHex
             );
-            this.kuberOutputs.push(
-              "Signed  txHash  : "+hash_transaction(signedTx.body()).to_hex()
-            );
-            return submitTx(instance, signedTx)
+            // this.kuberOutputs.push(
+            //   "Signed  txHash  : "+hash_transaction(signedTx.body()).to_hex()
+            // );
+            return instance.submitTx(signedTxHex)
               .then(() => {
                 this.kuberOutputs.push("✅ Tx Submitted");
               })
@@ -1307,6 +1307,12 @@ export default {
             this.isCompiling = false;
           });
       }
+    },
+    getTxHash(txstr){
+      let decodedTx = backend.decode(Buffer.from(txstr, "hex"));
+      const txbody = Uint8Array.from(backend.encode(decodedTx[0]));
+      const txHash = blake.blake2b(txbody, undefined, 32);
+      return Buffer.from(txHash).toString('hex')
     },
 
     editorInit() {

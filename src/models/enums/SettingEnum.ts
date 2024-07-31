@@ -9,6 +9,7 @@ export enum NetworkEnums {
   PreprodTestnet = "preprod testnet",
   Mainnet = "mainnet",
   Localhost = "localhost",
+  SanchoNet= "sanchonet"
 }
 
 export enum AddNetworkErrorEnums {
