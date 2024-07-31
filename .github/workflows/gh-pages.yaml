@@ -11,13 +11,16 @@ jobs:
     steps:
     - name: Checkout
       uses: actions/checkout@v2
-    - name: Use Node.js ${{ matrix.node-version }}
+
+    - name: Set up Node.js 20
       uses: actions/setup-node@v3
       with:
-        node-version: ${{ matrix.node-version }}
+        node-version: '20'
+        cache: 'yarn'  # Caches Yarn dependencies
+
     - name: Build
-      run: export NODE_OPTIONS=--max_old_space_size=6144  && npm ci && BASE_URL=/kuber-playground/ npm run build
-    
+      run: export NODE_OPTIONS=--max_old_space_size=6144 && yarn install && BASE_URL=/kuber-playground/ yarn build
+
     - name: Deploy to GitHub Pages
       uses: Cecilapp/GitHub-Pages-deploy@v3
       env:
