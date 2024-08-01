@@ -740,6 +740,7 @@ import {
   NetworkSettingEnums,
 } from "@/models/enums/SettingEnum";
 import AddressUtil from "./AddressUtil.vue";
+import { RawTx } from "kuber-client/types";
 
 const notification = _notification.useNotificationStore();
 
@@ -1030,7 +1031,7 @@ export default {
       }
     },
 
-    setKuberOutput(output: string) {
+    addKuberOutput(output: string) {
       let counter=this.outputCounter++
       this.kuberOutputs.push({id: counter ,value:output});
       // this.updateOutputScroll("kuber-output");
@@ -1239,7 +1240,7 @@ export default {
             type: "alert",
             message: e.message,
           });
-          this.setKuberOutput(e.message);
+          this.addKuberOutput(e.message);
           this.isCompiling = false;
           return;
         }
@@ -1261,11 +1262,15 @@ export default {
             const kuber = new Kuber(url)
             const transactionResponse:any  = await kuber.buildWithProvider(instance,request,true)
             console.log("Built Tx",transactionResponse)
-            this.kuberOutputs.push(
-              "Fee             : " + transactionResponse.fee + " lovelace"
+            
+            const tx :RawTx=backend.decode(Buffer.from(transactionResponse.cborHex,'hex'))
+            let fee = tx[0].get(2)
+            this.addKuberOutput(
+              "Fee             : " + fee + " lovelace"
             );
-            this.kuberOutputs.push("txHash : " + transactionResponse.hash);
-            this.kuberOutputs.push(
+            this.addKuberOutput(
+              "txHash          : " + transactionResponse.hash);
+            this.addKuberOutput(
               "Unsigned Tx     : [" +
                 transactionResponse.cborHex.length / 2 +
                 " bytes]  " +
@@ -1273,18 +1278,18 @@ export default {
             );
             const signedTxHex = await instance.getSignedTx(transactionResponse.cborHex,true);
             
-            this.kuberOutputs.push(
+            this.addKuberOutput(
               "Signed   Tx     : [" + signedTxHex.length / 2 + " bytes]  " + signedTxHex
             );
-            // this.kuberOutputs.push(
+            // this.addKuberOutput(
             //   "Signed  txHash  : "+hash_transaction(signedTx.body()).to_hex()
             // );
             return instance.submitTx(signedTxHex)
               .then(() => {
-                this.kuberOutputs.push("✅ Tx Submitted");
+                this.addKuberOutput("✅ Tx Submitted")
               })
               .catch((e) => {
-                this.kuberOutputs.push(
+                this.addKuberOutput(
                   "❌ Tx submission Failed: " + ((e && (e.message || e.info)) || e)
                 );
                 notification.setNotification({
@@ -1301,7 +1306,7 @@ export default {
               type: "alert",
               message:msg
             });
-            this.kuberOutputs.push("❌ "+msg);
+            this.addKuberOutput("❌ "+msg);
           })
           .finally(() => {
             this.isCompiling = false;
